@@ -1,0 +1,44 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# Project Overview: Pomodoro Timer Chrome Extension
+
+This document outlines the plan for developing a Pomodoro Timer Chrome Extension.
+
+## Core Goal
+To build a minimalist, clean, and highly functional Pomodoro Timer Chrome Extension with website blocking capabilities, inspired by applications like Todoist.
+
+## Key Features
+
+### Pomodoro Timer
+- Implements the standard Pomodoro technique: 25 minutes of focused work followed by a 5-minute break.
+- Timer durations (focus and break) should be user-adjustable.
+
+### Website Blocking
+- While the Pomodoro timer is active (during focus sessions), the extension will block a predefined list of distracting websites.
+- Default blocked websites: `youtube.com`, `twitter.com`, `facebook.com`.
+- A settings panel will allow users to add or remove websites from this blocklist.
+
+## UI/UX Requirements
+
+- **Popup Interface**: A simple and intuitive popup UI will be displayed when the extension icon is clicked.
+- **Timer Controls**: The popup will feature "Start", "Pause", and "Reset" buttons for the Pomodoro timer.
+- **Settings Page**: A dedicated page for settings, which includes:
+    - Blocklist editor (add/remove websites).
+    - Pomodoro duration settings (focus and break lengths).
+
+## Technical Specifications
+
+- **Manifest Version**: The extension must use Manifest V3.
+- **Blocking Mechanism**: Website blocking will be implemented using either `chrome.scripting` or `chrome.declarativeNetRequest`.
+- **Data Persistence**: User preferences, including timer settings and the custom blocklist, will be persisted using `chrome.storage.sync`.
+- **Deliverables**:
+    - `manifest.json`
+    - `popup.html`
+    - `popup.js`
+    - Any other necessary assets (icons, CSS files, etc.).
+- The final output should include all source code files, structured in a way that is ready to be zipped and loaded directly into Chrome via `chrome://extensions`.
+
+This rule references the overall project plan detailed in [project_plan.mdc](mdc:.cursor/rules/project_plan.mdc).

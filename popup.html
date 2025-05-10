@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+  <head>
+    <title>Pomodoro Timer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root[data-theme="dark"] {
+        --bg-primary: #1C1C1E;
+        --bg-secondary: #2C2C2E;
+        --text-primary: #FFFFFF;
+        --text-secondary: rgba(255, 255, 255, 0.8);
+        --accent-primary: #FE4F2D;
+        --accent-secondary: #DAA520;
+        --accent-danger: #FF3B30;
+        --button-text-dark: #FFFFFF;
+      }
+
+      :root[data-theme="light"] {
+        --bg-primary: #F2F2F7;
+        --bg-secondary: #FFFFFF;
+        --text-primary: #1C1C1E;
+        --text-secondary: rgba(28, 28, 30, 0.8);
+        --accent-primary: #FE4F2D;
+        --accent-secondary: #FF9500;
+        --accent-danger: #FF3B30;
+        --button-text-dark: #FFFFFF;
+      }
+
+      * {
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
+      }
+
+      body {
+        width: 360px;
+        margin: 0;
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-primary);
+        color: var(--text-primary);
+        position: relative;
+        overflow: hidden;
+      }
+
+      .tomato-bg {
+        position: absolute;
+        top: -40px;
+        right: -30px;
+        width: 140px;
+        height: 140px;
+        opacity: 0.05;
+        pointer-events: none;
+        z-index: 0;
+        transform: rotate(-15deg);
+      }
+
+      .tomato-bg.bottom {
+        top: auto;
+        bottom: -50px;
+        left: -40px;
+        transform: rotate(165deg) scale(0.8);
+      }
+
+      [data-theme="light"] .tomato-bg {
+        opacity: 0.08;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 16px;
+        background-color: var(--accent-primary);
+      }
+
+      .app-title {
+        color: var(--button-text-dark);
+        font-weight: 600;
+        font-size: 16px;
+        margin: 0;
+      }
+
+      .theme-toggle {
+        background: transparent;
+        border: none;
+        border-radius: 20px;
+        padding: 8px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        color: var(--button-text-dark);
+      }
+
+      .theme-toggle:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      .theme-toggle svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--bg-secondary);
+        background-color: var(--bg-primary);
+      }
+
+      .tab {
+        padding: 12px 24px;
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        cursor: pointer;
+        border: none;
+        background: none;
+        position: relative;
+        transition: color 0.3s ease;
+      }
+
+      .tab.active {
+        color: var(--accent-primary);
+      }
+
+      .tab.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: var(--accent-primary);
+        transition: transform 0.3s ease;
+      }
+
+      .tab:hover {
+        color: var(--accent-primary);
+      }
+
+      .content {
+        position: relative;
+        z-index: 1;
+        padding: 16px;
+        box-sizing: border-box;
+        width: 100%;
+      }
+
+      .tab-content {
+        display: none;
+      }
+
+      .tab-content.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Settings styles */
+      .settings-group {
+        margin-bottom: 20px;
+        width: 100%;
+        box-sizing: border-box;
+        word-break: break-word;
+        white-space: normal;
+      }
+
+      .settings-group h3 {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 12px 0;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        word-break: break-word;
+        white-space: normal;
+      }
+
+      .settings-group h3 .sites-count {
+        font-size: 12px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        margin-left: 8px;
+      }
+
+      .setting-item {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+        width: 100%;
+        box-sizing: border-box;
+        word-break: break-word;
+        white-space: normal;
+      }
+
+      .setting-item label {
+        font-size: 14px;
+        color: var(--text-secondary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        word-break: break-word;
+        white-space: normal;
+      }
+
+      .setting-item input[type="number"] {
+        width: 80px;
+        padding: 8px 12px;
+        border: 1px solid var(--bg-secondary);
+        border-radius: 8px;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-family: 'Inter', sans-serif;
+        transition: all 0.3s ease;
+        -moz-appearance: textfield;
+      }
+
+      .setting-item input[type="number"]::-webkit-outer-spin-button,
+      .setting-item input[type="number"]::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      .setting-item input[type="number"]:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(254, 79, 45, 0.2);
+      }
+
+      .time-input-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .time-input-wrapper span {
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      .settings-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .settings-row .setting-item {
+        flex: 1;
+        margin-bottom: 0;
+      }
+
+      .setting-item textarea {
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 120px;
+        padding: 10px;
+        border: 1px solid var(--bg-secondary);
+        border-radius: 8px;
+        background: var(--bg-secondary);
+        color: var(--text-primary);
+        font-family: 'Inter', sans-serif;
+        font-size: 13px;
+        line-height: 1.5;
+        resize: vertical;
+        max-width: 100%;
+      }
+
+      .setting-item input:focus,
+      .setting-item textarea:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+      }
+
+      .setting-item .helper-text {
+        font-size: 12px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+
+      input:disabled, textarea:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      .settings-warning {
+        font-size: 13px;
+        color: var(--accent-danger);
+        text-align: center;
+        padding: 8px;
+        margin-top: 16px;
+        background: rgba(255, 59, 48, 0.1);
+        border-radius: 8px;
+        display: none;
+      }
+
+      .settings-warning.visible {
+        display: block;
+        animation: fadeIn 0.3s ease;
+      }
+
+      .timer-container {
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 20px auto;
+      }
+
+      .timer-circle {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+      }
+
+      .timer-circle-bg {
+        fill: none;
+        stroke: var(--bg-secondary);
+        stroke-width: 8;
+      }
+
+      .timer-circle-progress {
+        fill: none;
+        stroke: var(--accent-primary);
+        stroke-width: 8;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.3s ease;
+      }
+
+      .timer-circle.break .timer-circle-progress {
+        stroke: var(--accent-secondary);
+      }
+
+      .timer-display {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        z-index: 1;
+      }
+
+      .timer-digits {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .timer-separator {
+        margin: 0 4px;
+        color: var(--text-secondary);
+      }
+
+      .timer-digit {
+        min-width: 40px;
+      }
+
+      .timer-label {
+        font-size: 14px;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+
+      .controls {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .hidden {
+        display: none;
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      button:not(.hidden) {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      button:hover {
+        transform: translateY(-2px);
+        filter: brightness(1.1);
+      }
+
+      button:active {
+        transform: translateY(1px);
+      }
+
+      #startBtn {
+        background-color: var(--accent-primary);
+        color: var(--button-text-dark);
+        padding: 12px 32px;
+      }
+
+      #pauseBtn {
+        background-color: var(--accent-secondary);
+        color: var(--button-text-dark);
+      }
+
+      #resumeBtn {
+        background-color: var(--accent-primary);
+        color: var(--button-text-dark);
+      }
+
+      #resetBtn {
+        background-color: var(--accent-danger);
+        color: var(--text-primary);
+      }
+
+      .settings-link {
+        display: block;
+        text-align: center;
+        margin-top: 20px;
+        color: var(--accent-primary);
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        opacity: 0.9;
+        transition: all 0.3s ease;
+      }
+
+      .settings-link:hover {
+        opacity: 1;
+        transform: translateY(-1px);
+      }
+
+      /* Modal styles */
+      .modal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(0.95);
+        background: var(--bg-secondary);
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        text-align: center;
+        color: var(--text-primary);
+        width: 260px;
+        max-width: 90%;
+      }
+
+      .modal.visible {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+      }
+
+      .modal-content {
+        margin-bottom: 16px;
+      }
+
+      .modal-content p {
+        margin: 6px 0;
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+
+      .modal-content p:first-child {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+
+      .modal-buttons {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .modal-buttons button {
+        padding: 8px 16px;
+        font-size: 13px;
+        min-width: 80px;
+      }
+
+      /* Update the pause modal content */
+      #pauseModal .modal-content p:first-child {
+        margin-bottom: 4px;
+      }
+
+      #pauseModal .modal-content p:last-child {
+        font-size: 12px;
+        opacity: 0.8;
+      }
+
+      /* Update the reset modal content */
+      #resetModal .modal-content p:first-child {
+        color: var(--accent-danger);
+      }
+
+      .overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        z-index: 999;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .overlay.visible {
+        opacity: 1;
+      }
+
+      .confirm-btn {
+        background-color: var(--accent-primary);
+        color: var(--button-text-dark);
+      }
+
+      /* Tooltip styles */
+      [data-tooltip] {
+        position: relative;
+      }
+
+      [data-tooltip]:hover::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 6px 10px;
+        background: var(--bg-secondary);
+        color: var(--accent-danger);
+        font-size: 12px;
+        white-space: nowrap;
+        border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        z-index: 100;
+        animation: fadeIn 0.2s ease;
+      }
+
+      /* Language selector styles */
+      .language-select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid var(--bg-secondary);
+        border-radius: 8px;
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+        font-size: 14px;
+        font-family: 'Inter', sans-serif;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .language-select:focus {
+        outline: none;
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(254, 79, 45, 0.2);
+      }
+
+      .language-select option {
+        background-color: var(--bg-secondary);
+        color: var(--text-primary);
+      }
+
+      .pomodoro-counter {
+        text-align: center;
+        margin: 5px 0 15px;
+        color: var(--text-secondary);
+        font-size: 14px;
+      }
+
+      .pomodoro-counter #pomodoroCount {
+        font-weight: bold;
+        color: var(--accent-primary);
+        margin: 0 4px;
+      }
+
+      .small-button {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        padding: 2px 6px;
+        font-size: 12px;
+        cursor: pointer;
+        opacity: 0.7;
+        border-radius: 4px;
+      }
+
+      .small-button:hover {
+        opacity: 1;
+        color: var(--accent-primary);
+        background-color: rgba(254, 79, 45, 0.1);
+      }
+    </style>
+  </head>
+  <body>
+    <svg class="tomato-bg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50 15C45 15 42 12 40 10C38 8 35 5 30 5C25 5 20 8 20 15C20 22 25 25 30 25C35 25 38 22 40 20C42 18 45 15 50 15Z" fill="currentColor"/>
+      <path d="M60 35C80 35 95 50 95 70C95 85 80 95 50 95C20 95 5 85 5 70C5 50 20 35 40 35C45 35 48 37 50 40C52 37 55 35 60 35Z" fill="currentColor"/>
+      <path d="M45 50C45 52.7614 42.7614 55 40 55C37.2386 55 35 52.7614 35 50C35 47.2386 37.2386 45 40 45C42.7614 45 45 47.2386 45 50Z" fill="var(--bg-primary)"/>
+      <path d="M65 50C65 52.7614 62.7614 55 60 55C57.2386 55 55 52.7614 55 50C55 47.2386 57.2386 45 60 45C62.7614 45 65 47.2386 65 50Z" fill="var(--bg-primary)"/>
+      <path d="M45 70C45 75 48 78 50 78C52 78 55 75 55 70" stroke="var(--bg-primary)" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+
+    <svg class="tomato-bg bottom" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50 15C45 15 42 12 40 10C38 8 35 5 30 5C25 5 20 8 20 15C20 22 25 25 30 25C35 25 38 22 40 20C42 18 45 15 50 15Z" fill="currentColor"/>
+      <path d="M60 35C80 35 95 50 95 70C95 85 80 95 50 95C20 95 5 85 5 70C5 50 20 35 40 35C45 35 48 37 50 40C52 37 55 35 60 35Z" fill="currentColor"/>
+      <path d="M45 50C45 52.7614 42.7614 55 40 55C37.2386 55 35 52.7614 35 50C35 47.2386 37.2386 45 40 45C42.7614 45 45 47.2386 45 50Z" fill="var(--bg-primary)"/>
+      <path d="M65 50C65 52.7614 62.7614 55 60 55C57.2386 55 55 52.7614 55 50C55 47.2386 57.2386 45 60 45C62.7614 45 65 47.2386 65 50Z" fill="var(--bg-primary)"/>
+      <path d="M45 70C45 75 48 78 50 78C52 78 55 75 55 70" stroke="var(--bg-primary)" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+
+    <div class="header">
+      <h1 class="app-title">Pomodoro Timer</h1>
+      <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+        <svg class="sun-icon" viewBox="0 0 24 24">
+          <path d="M12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.65 0-3 1.35-3 3s1.35 3 3 3 3-1.35 3-3-1.35-3-3-3zm0-2V3c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1s-1-.45-1-1zm0 14v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1s-1-.45-1-1zm7-7h4c.55 0 1 .45 1 1s-.45 1-1 1h-4c-.55 0-1-.45-1-1s.45-1 1-1zM3 12h4c.55 0 1 .45 1 1s-.45 1-1 1H3c-.55 0-1-.45-1-1s.45-1 1-1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="timer" data-i18n="timerTab">Timer</button>
+      <button class="tab" data-tab="settings" data-i18n="settingsTab">Settings</button>
+    </div>
+
+    <div class="content">
+      <div class="tab-content active" id="timer-content">
+        <div class="timer-container">
+          <svg class="timer-circle" viewBox="0 0 100 100">
+            <circle class="timer-circle-bg" cx="50" cy="50" r="45" />
+            <circle class="timer-circle-progress" cx="50" cy="50" r="45" />
+          </svg>
+          <div class="timer-display">
+            <div class="timer-digits">
+              <span class="timer-digit minutes">25</span>
+              <span class="timer-separator">:</span>
+              <span class="timer-digit seconds">00</span>
+            </div>
+            <div class="timer-label" data-i18n="focusTime">Focus Time</div>
+          </div>
+        </div>
+        <div class="pomodoro-counter">
+          <span data-i18n="completedPomodorosLabel">Completed:</span>
+          <span id="pomodoroCount">0</span>
+          <button id="resetCountBtn" class="small-button" data-i18n="resetCount">Reset</button>
+        </div>
+        <div class="controls">
+          <button id="startBtn" data-i18n="startButton">Start</button>
+          <button id="pauseBtn" class="hidden" data-i18n="pauseButton">Pause</button>
+          <button id="resumeBtn" class="hidden" data-i18n="resumeButton">Resume</button>
+          <button id="resetBtn" class="hidden" data-i18n="resetButton">Reset</button>
+        </div>
+      </div>
+
+      <div class="tab-content" id="settings-content">
+        <div class="settings-group">
+          <h3 data-i18n="timerDuration">Timer Duration</h3>
+          <div class="settings-row">
+            <div class="setting-item">
+              <label for="focusTime" data-i18n="focusTime">Focus Time</label>
+              <div class="time-input-wrapper">
+                <input type="number" id="focusTime" min="1" max="60" value="25">
+                <span data-i18n="min">min</span>
+              </div>
+            </div>
+            <div class="setting-item">
+              <label for="breakTime" data-i18n="breakTime">Break Time</label>
+              <div class="time-input-wrapper">
+                <input type="number" id="breakTime" min="1" max="30" value="5">
+                <span data-i18n="min">min</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3 data-i18n="language">Language</h3>
+          <div class="setting-item">
+            <select id="languageSelect" class="language-select">
+              <option value="en">English</option>
+              <option value="id">Bahasa Indonesia</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <h3>
+            <span data-i18n="blockedSites">Blocked Sites</span>
+            <span class="sites-count">0 sites</span>
+          </h3>
+          <div class="setting-item">
+            <textarea id="blockedSites" 
+              data-i18n-placeholder="enterDomains"></textarea>
+            <span class="helper-text" data-i18n="enterDomains">Enter one domain per line (e.g., youtube.com)</span>
+          </div>
+        </div>
+
+        <div class="settings-warning" data-i18n="settingsWarning">
+          Pause or reset the timer to edit settings
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause Confirmation Modal -->
+    <div class="overlay" id="pauseOverlay"></div>
+    <div class="modal" id="pauseModal">
+      <div class="modal-content">
+        <p data-i18n="pauseTitle">Pause Timer?</p>
+        <p data-i18n="pauseDesc">Take a quick break if needed</p>
+      </div>
+      <div class="modal-buttons">
+        <button class="cancel-btn" id="pauseCancelBtn" data-i18n="keepGoing">Keep Going</button>
+        <button class="confirm-btn" id="pauseConfirmBtn" data-i18n="pause">Pause</button>
+      </div>
+    </div>
+
+    <!-- Reset Confirmation Modal -->
+    <div class="overlay" id="resetOverlay"></div>
+    <div class="modal" id="resetModal">
+      <div class="modal-content">
+        <p data-i18n="resetTitle">Reset Timer?</p>
+        <p data-i18n="resetDesc">Current progress will be lost</p>
+      </div>
+      <div class="modal-buttons">
+        <button class="cancel-btn" id="resetCancelBtn" data-i18n="cancel">Cancel</button>
+        <button class="confirm-btn" id="resetConfirmBtn" data-i18n="reset">Reset</button>
+      </div>
+    </div>
+
+    <script src="translations.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
