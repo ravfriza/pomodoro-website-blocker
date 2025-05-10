@@ -14,7 +14,19 @@ This project is a productivity tool that combines the Pomodoro Technique with we
 - Bahasa Indonesia support
 
 ## Getting Started
-Instructions for installation and usage will be added soon.
+
+### Installation (Chrome Extension)
+
+1. Clone this repository to your local machine:
+   ```bash
+   git clone https://github.com/your-username/pomodoro-website-blocker.git
+   ```
+2. Open Google Chrome and go to `chrome://extensions/`.
+3. Turn on **Developer mode** (toggle in the top right corner).
+4. Click **Load unpacked**.
+5. Select the folder where you cloned this project.
+
+The extension should now be installed and ready to use!
 
 ---
 Feel free to contribute or suggest improvements!
