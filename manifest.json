@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Pomodoro Timer & Website Blocker",
-  "version": "1.0",
-  "description": "A Pomodoro timer with website blocking functionality to help you stay focused",
+  "version": "2.0.0",
+  "description": "A productivity-focused extension combining the Pomodoro Technique with intelligent website blocking. Stay focused, build better work habits.",
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

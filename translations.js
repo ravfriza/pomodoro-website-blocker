@@ -21,7 +21,7 @@ const translations = {
     language: "Language",
     blockedSites: "Blocked Sites",
     enterDomains: "Enter one domain per line (e.g., youtube.com)",
-    settingsWarning: "Pause or reset the timer to edit settings",
+    settingsWarning: "Timer duration settings are disabled while timer is active",
     
     // Block page
     blockPageTitle: "Time to Focus!",
@@ -65,7 +65,7 @@ const translations = {
     language: "Bahasa",
     blockedSites: "Situs Diblokir",
     enterDomains: "Masukkan satu domain per baris (contoh: youtube.com)",
-    settingsWarning: "Jeda atau reset timer untuk mengedit pengaturan",
+    settingsWarning: "Pengaturan durasi timer dinonaktifkan saat timer aktif",
     
     // Block page
     blockPageTitle: "Yuk, Fokus Dulu!",

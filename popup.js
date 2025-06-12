@@ -39,7 +39,7 @@ let timeLeft = 25 * 60; // Initialize to 25 minutes (1500 seconds)
 let isRunning = false;
 let isBreak = false;
 let isPaused = false;
-let saveTimeout;
+let saveTimeout; // Single declaration for save timeout
 let lastTimeLeft = null;
 
 // Calculate circle circumference
@@ -149,7 +149,48 @@ function updateDisplay(seconds) {
   timerCircle.classList.toggle('break', isBreak);
 }
 
-// Listen for state updates from background
+// Update display periodically and check sync
+function checkSync() {
+  try {
+    chrome.runtime.sendMessage({ action: 'getState' }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error getting state:', chrome.runtime.lastError);
+        return;
+      }
+      
+      if (response && typeof response.timeLeft === 'number') {
+        // Only update if time has changed significantly
+        if (Math.abs(response.timeLeft - lastTimeLeft) >= 1) {
+          timeLeft = response.timeLeft;
+          isRunning = response.isRunning;
+          isBreak = response.isBreak;
+          isPaused = response.isPaused || false;
+          updateDisplay(timeLeft);
+          updateButtonVisibility(isRunning, isPaused);
+          lastTimeLeft = timeLeft;
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error in checkSync:', error);
+  }
+}
+
+// Check sync more frequently when timer is running, less when idle
+let syncInterval;
+function updateSyncInterval() {
+  if (syncInterval) {
+    clearInterval(syncInterval);
+  }
+  
+  const interval = isRunning ? 500 : 2000; // 500ms when running, 2s when idle
+  syncInterval = setInterval(checkSync, interval);
+}
+
+// Initial sync setup
+updateSyncInterval();
+
+// Update sync interval when state changes
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'stateUpdate') {
     timeLeft = message.timeLeft;
@@ -164,29 +205,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     
     updateDisplay(timeLeft);
     updateButtonVisibility(isRunning, isPaused);
+    updateSyncInterval(); // Update sync frequency based on new state
   }
 });
-
-// Update display periodically and check sync
-function checkSync() {
-  chrome.runtime.sendMessage({ action: 'getState' }, (response) => {
-    if (response && typeof response.timeLeft === 'number') {
-      // Only update if time has changed
-      if (response.timeLeft !== lastTimeLeft) {
-        timeLeft = response.timeLeft;
-        isRunning = response.isRunning;
-        isBreak = response.isBreak;
-        isPaused = response.isPaused || false;
-        updateDisplay(timeLeft);
-        updateButtonVisibility(isRunning, isPaused);
-        lastTimeLeft = timeLeft;
-      }
-    }
-  });
-}
-
-// Check sync more frequently when timer is running
-setInterval(checkSync, 500);
 
 // Theme toggle
 themeToggle.addEventListener('click', () => {
@@ -225,13 +246,20 @@ tabs.forEach(tab => {
 
 // Function to toggle input fields
 function toggleInputs(disable) {
-  // Disable/enable all inputs
+  // Disable/enable timer duration inputs (most important when timer is active)
   focusTimeInput.disabled = disable;
   breakTimeInput.disabled = disable;
-  blockedSitesInput.disabled = disable;
   
-  // Show/hide warning message
+  // Keep blocked sites input always enabled for user convenience
+  // Users might want to add sites during a session
+  blockedSitesInput.disabled = false;
+  
+  // Show/hide warning message for timer duration settings only
   settingsWarning.classList.toggle('visible', disable);
+  
+  // Add visual feedback to disabled inputs
+  focusTimeInput.classList.toggle('disabled', disable);
+  breakTimeInput.classList.toggle('disabled', disable);
 }
 
 // Update button visibility and input states
@@ -244,19 +272,19 @@ function updateButtonVisibility(isRunning, isPaused) {
     resetBtn.classList.add('hidden');
     toggleInputs(false); // Enable inputs
   } else if (isPaused) {
-    // Timer is paused
+    // Timer is paused - show resume and reset buttons, disable inputs
     startBtn.classList.add('hidden');
     pauseBtn.classList.add('hidden');
     resumeBtn.classList.remove('hidden');
     resetBtn.classList.remove('hidden');
-    toggleInputs(false); // Enable inputs
+    toggleInputs(true); // Disable timer duration inputs when paused
   } else {
-    // Timer is running
+    // Timer is running - show both pause and reset buttons for immediate access
     startBtn.classList.add('hidden');
     pauseBtn.classList.remove('hidden');
     resumeBtn.classList.add('hidden');
     resetBtn.classList.remove('hidden');
-    toggleInputs(true); // Disable inputs
+    toggleInputs(true); // Disable inputs while running
   }
 }
 
@@ -305,33 +333,58 @@ function updateSitesCount(count) {
 }
 
 function saveSettings() {
-  const focusTime = Math.max(1, Math.min(60, parseInt(focusTimeInput.value) || 25));
-  const breakTime = Math.max(1, Math.min(30, parseInt(breakTimeInput.value) || 5));
-  
-  // Clean and validate blocked sites
-  const blockedSites = blockedSitesInput.value
-    .split('\n')
-    .map(site => site.trim().toLowerCase())
-    .filter(site => site.length > 0)
-    .filter((site, index, self) => self.indexOf(site) === index); // Remove duplicates
-
-  chrome.storage.sync.set({
-    focusTime,
-    breakTime,
-    blockedSites
-  }, () => {
-    // Update UI
-    focusTimeInput.value = focusTime;
-    breakTimeInput.value = breakTime;
-    blockedSitesInput.value = blockedSites.join('\n');
-    updateSitesCount(blockedSites.length);
+  try {
+    // Validate and clamp timer values
+    const focusTime = Math.max(1, Math.min(60, parseInt(focusTimeInput.value) || 25));
+    const breakTime = Math.max(1, Math.min(30, parseInt(breakTimeInput.value) || 5));
     
-    // Reset timer if it's not running
-    if (!isRunning) {
-      timeLeft = focusTime * 60;
-      updateDisplay(timeLeft);
-    }
-  });
+    // Clean and validate blocked sites
+    const blockedSitesText = blockedSitesInput.value || '';
+    const blockedSites = blockedSitesText
+      .split('\n')
+      .map(site => {
+        // Clean and normalize each site
+        const cleaned = site.trim().toLowerCase()
+          .replace(/^https?:\/\//, '')  // Remove protocol
+          .replace(/^www\./, '')        // Remove www
+          .replace(/\/.*$/, '');        // Remove path
+        return cleaned;
+      })
+      .filter(site => {
+        // Validate domain format
+        if (!site || site.length === 0) return false;
+        
+        // Basic domain validation (letters, numbers, dots, hyphens)
+        const domainRegex = /^[a-z0-9.-]+\.[a-z]{2,}$/;
+        return domainRegex.test(site);
+      })
+      .filter((site, index, self) => self.indexOf(site) === index); // Remove duplicates
+
+    chrome.storage.sync.set({
+      focusTime,
+      breakTime,
+      blockedSites
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Failed to save settings:', chrome.runtime.lastError);
+        return;
+      }
+      
+      // Update UI with validated values
+      focusTimeInput.value = focusTime;
+      breakTimeInput.value = breakTime;
+      blockedSitesInput.value = blockedSites.join('\n');
+      updateSitesCount(blockedSites.length);
+      
+      // Reset timer if it's not running
+      if (!isRunning) {
+        timeLeft = focusTime * 60;
+        updateDisplay(timeLeft);
+      }
+    });
+  } catch (error) {
+    console.error('Error saving settings:', error);
+  }
 }
 
 // Event listeners
@@ -339,16 +392,32 @@ function saveSettings() {
   input.addEventListener('change', saveSettings);
 });
 
-// Simplified blocked sites input handling
+// Optimized blocked sites input handling with debouncing
 let lastValue = blockedSitesInput.value;
-blockedSitesInput.addEventListener('input', () => {
+
+// Debounced save function to prevent excessive saves
+function debouncedSave() {
   clearTimeout(saveTimeout);
-  // Only save if the value has actually changed
-  if (lastValue !== blockedSitesInput.value) {
-    saveTimeout = setTimeout(() => {
+  saveTimeout = setTimeout(() => {
+    if (lastValue !== blockedSitesInput.value) {
       lastValue = blockedSitesInput.value;
       saveSettings();
-    }, 2000); // Increased to 2 seconds to be less aggressive
+    }
+  }, 1000); // Reduced to 1 second for better UX
+}
+
+blockedSitesInput.addEventListener('input', debouncedSave);
+blockedSitesInput.addEventListener('paste', () => {
+  // Handle paste events with a slight delay to get the final value
+  setTimeout(debouncedSave, 50);
+});
+
+// Save immediately when user loses focus (better UX)
+blockedSitesInput.addEventListener('blur', () => {
+  clearTimeout(saveTimeout);
+  if (lastValue !== blockedSitesInput.value) {
+    lastValue = blockedSitesInput.value;
+    saveSettings();
   }
 });
 
@@ -373,11 +442,7 @@ document.getElementById('pauseConfirmBtn').addEventListener('click', () => {
 });
 
 document.getElementById('resumeBtn').addEventListener('click', () => {
-  chrome.runtime.sendMessage({ 
-    action: 'start',
-    focusTime: parseInt(focusTimeInput.value),
-    breakTime: parseInt(breakTimeInput.value)
-  });
+  chrome.runtime.sendMessage({ action: 'resume' });
   // Button visibility will be updated by state update from background
 });
 

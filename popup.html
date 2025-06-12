@@ -617,6 +617,21 @@
         color: var(--accent-primary);
         background-color: rgba(254, 79, 45, 0.1);
       }
+
+      /* Disabled input styling */
+      .time-input-wrapper input.disabled,
+      .time-input-wrapper input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        background-color: var(--bg-primary);
+        color: var(--text-secondary);
+      }
+
+      .time-input-wrapper input.disabled + span,
+      .time-input-wrapper input:disabled + span {
+        opacity: 0.5;
+        color: var(--text-secondary);
+      }
     </style>
   </head>
   <body>
@@ -723,7 +738,7 @@
         </div>
 
         <div class="settings-warning" data-i18n="settingsWarning">
-          Pause or reset the timer to edit settings
+          Timer duration settings are disabled while timer is active
         </div>
       </div>
     </div>
